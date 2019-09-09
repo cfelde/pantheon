@@ -66,6 +66,7 @@ public final class RlpBlockImporterTest {
             .dataDirectory(dataDir)
             .clock(TestClock.fixed())
             .transactionPoolConfiguration(TransactionPoolConfiguration.builder().build())
+            .gasLimitCalculator(gasLimit -> gasLimit)
             .build();
     final RlpBlockImporter.ImportResult result =
         rlpBlockImporter.importBlockchain(source, targetController);
@@ -105,6 +106,7 @@ public final class RlpBlockImporterTest {
             .dataDirectory(dataDir)
             .clock(TestClock.fixed())
             .transactionPoolConfiguration(TransactionPoolConfiguration.builder().build())
+            .gasLimitCalculator(gasLimit -> gasLimit)
             .build();
     final RlpBlockImporter.ImportResult result =
         rlpBlockImporter.importBlockchain(source, controller);

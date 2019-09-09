@@ -63,6 +63,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.concurrent.Executors;
+import java.util.function.Function;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.logging.log4j.LogManager;
@@ -84,6 +85,7 @@ public abstract class PantheonControllerBuilder<C> {
   protected Clock clock;
   protected KeyPair nodeKeys;
   protected boolean isRevertReasonEnabled;
+  protected Function<Long, Long> gasLimitCalculator;
   private StorageProvider storageProvider;
   private final List<Runnable> shutdownActions = new ArrayList<>();
   private RocksDbConfiguration rocksDbConfiguration;
@@ -181,6 +183,12 @@ public abstract class PantheonControllerBuilder<C> {
     return this;
   }
 
+  public PantheonControllerBuilder<C> gasLimitCalculator(
+      final Function<Long, Long> gasLimitCalculator) {
+    this.gasLimitCalculator = gasLimitCalculator;
+    return this;
+  }
+
   public PantheonController<C> build() throws IOException {
     checkNotNull(genesisConfig, "Missing genesis config");
     checkNotNull(syncConfig, "Missing sync config");
@@ -193,6 +201,7 @@ public abstract class PantheonControllerBuilder<C> {
     checkNotNull(clock, "Mising clock");
     checkNotNull(transactionPoolConfiguration, "Missing transaction pool configuration");
     checkNotNull(nodeKeys, "Missing node keys");
+    checkNotNull(gasLimitCalculator, "Missing gas limit calculator");
     checkArgument(
         storageProvider != null || rocksDbConfiguration != null,
         "Must supply either a storage provider or RocksDB configuration");

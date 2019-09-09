@@ -98,7 +98,8 @@ public class CliqueMinerExecutorTest {
             proposerKeyPair,
             new MiningParameters(AddressHelpers.ofValue(1), Wei.ZERO, vanityData, false),
             mock(CliqueBlockScheduler.class),
-            new EpochManager(EPOCH_LENGTH));
+            new EpochManager(EPOCH_LENGTH),
+            (gasLimit) -> gasLimit);
 
     // NOTE: Passing in the *parent* block, so must be 1 less than EPOCH
     final BlockHeader header = blockHeaderBuilder.number(EPOCH_LENGTH - 1).buildHeader();
@@ -135,7 +136,8 @@ public class CliqueMinerExecutorTest {
             proposerKeyPair,
             new MiningParameters(AddressHelpers.ofValue(1), Wei.ZERO, vanityData, false),
             mock(CliqueBlockScheduler.class),
-            new EpochManager(EPOCH_LENGTH));
+            new EpochManager(EPOCH_LENGTH),
+            (gasLimit) -> gasLimit);
 
     // Parent block was epoch, so the next block should contain no validators.
     final BlockHeader header = blockHeaderBuilder.number(EPOCH_LENGTH).buildHeader();
@@ -172,7 +174,8 @@ public class CliqueMinerExecutorTest {
             proposerKeyPair,
             new MiningParameters(AddressHelpers.ofValue(1), Wei.ZERO, initialVanityData, false),
             mock(CliqueBlockScheduler.class),
-            new EpochManager(EPOCH_LENGTH));
+            new EpochManager(EPOCH_LENGTH),
+            (gasLimit) -> gasLimit);
 
     executor.setExtraData(modifiedVanityData);
     final BytesValue extraDataBytes = executor.calculateExtraData(blockHeaderBuilder.buildHeader());

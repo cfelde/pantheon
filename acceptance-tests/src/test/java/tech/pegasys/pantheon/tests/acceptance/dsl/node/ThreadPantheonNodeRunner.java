@@ -119,6 +119,7 @@ public class ThreadPantheonNodeRunner implements PantheonNodeRunner {
               .ethProtocolConfiguration(EthProtocolConfiguration.defaultConfig())
               .clock(Clock.systemUTC())
               .isRevertReasonEnabled(node.isRevertReasonEnabled())
+              .gasLimitCalculator((gasLimit) -> gasLimit)
               .build();
     } catch (final IOException e) {
       throw new RuntimeException("Error building PantheonController", e);

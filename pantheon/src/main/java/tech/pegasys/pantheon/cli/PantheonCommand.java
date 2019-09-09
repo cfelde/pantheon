@@ -118,6 +118,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -634,6 +635,12 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
   private final Path privacyMarkerTransactionSigningKeyPath = null;
 
   @Option(
+      names = {"--target-gas-limit"},
+      description =
+          "Sets target gas limit per block. If set each blocks gas limit will approach this setting over time if the current gas limit is different.")
+  private final Long targetGasLimit = null;
+
+  @Option(
       names = {"--tx-pool-max-size"},
       paramLabel = MANDATORY_INTEGER_FORMAT_HELP,
       description =
@@ -657,6 +664,7 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
   private MetricsConfiguration metricsConfiguration;
   private Optional<PermissioningConfiguration> permissioningConfiguration;
   private Collection<EnodeURL> staticNodes;
+  private Function<Long, Long> gasLimitCalculator;
   private PantheonController<?> pantheonController;
 
   private final Supplier<ObservableMetricsSystem> metricsSystem =
@@ -879,6 +887,7 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
     webSocketConfiguration = webSocketConfiguration();
     permissioningConfiguration = permissioningConfiguration();
     staticNodes = loadStaticNodes();
+    gasLimitCalculator = gasLimitCalculator();
     logger.info("Connecting to {} static nodes.", staticNodes.size());
     logger.trace("Static Nodes = {}", staticNodes);
     final List<URI> enodeURIs =
@@ -946,7 +955,8 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
           .clock(Clock.systemUTC())
           .isRevertReasonEnabled(isRevertReasonEnabled)
           .isPruningEnabled(isPruningEnabled)
-          .pruningConfiguration(buildPruningConfiguration());
+          .pruningConfiguration(buildPruningConfiguration())
+          .gasLimitCalculator(gasLimitCalculator);
     } catch (final IOException e) {
       throw new ExecutionException(this.commandLine, "Invalid path", e);
     }
@@ -1534,6 +1544,31 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
     final Path staticNodesPath = dataDir().resolve(staticNodesFilename);
 
     return StaticNodesParser.fromPath(staticNodesPath);
+  }
+
+  private Function<Long, Long> gasLimitCalculator() {
+    final long targetGasLimit = this.targetGasLimit == null ? 0L : this.targetGasLimit;
+    final long adjustmentFactor = 1024L;
+
+    if (targetGasLimit > 0L) {
+      return (gasLimit) -> {
+        long newGasLimit;
+
+        if (targetGasLimit > gasLimit) {
+          newGasLimit = Math.min(targetGasLimit, gasLimit + adjustmentFactor);
+        } else if (targetGasLimit < gasLimit) {
+          newGasLimit = Math.max(targetGasLimit, gasLimit - adjustmentFactor);
+        } else {
+          return gasLimit;
+        }
+
+        logger.debug("Adjusting block gas limit from {} to {}", gasLimit, newGasLimit);
+
+        return newGasLimit;
+      };
+    } else {
+      return gasLimit -> gasLimit;
+    }
   }
 
   public PantheonExceptionHandler exceptionHandler() {

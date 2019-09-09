@@ -66,6 +66,7 @@ public class PrivacyTest {
             .clock(TestClock.fixed())
             .privacyParameters(privacyParameters)
             .transactionPoolConfiguration(TransactionPoolConfiguration.builder().build())
+            .gasLimitCalculator(gasLimit -> gasLimit)
             .build();
 
     final Address privacyContractAddress = Address.privacyPrecompiled(ADDRESS);

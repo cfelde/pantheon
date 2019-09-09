@@ -71,6 +71,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -175,6 +176,7 @@ public class PantheonCommandTest extends CommandTestAbstract {
     verify(mockControllerBuilder).dataDirectory(isNotNull());
     verify(mockControllerBuilder).miningParameters(miningArg.capture());
     verify(mockControllerBuilder).nodePrivateKeyFile(isNotNull());
+    verify(mockControllerBuilder).gasLimitCalculator(isNotNull());
     verify(mockControllerBuilder).build();
 
     assertThat(syncConfigurationCaptor.getValue().getSyncMode()).isEqualTo(SyncMode.FULL);
@@ -2734,5 +2736,41 @@ public class PantheonCommandTest extends CommandTestAbstract {
 
     assertThat(commandErrorOutput.toString())
         .contains("Unknown options in TOML configuration file: invalid_option, invalid_option2");
+  }
+
+  @Test
+  public void targetGasLimitIsEnabledWhenSpecified() throws Exception {
+    parseCommand("--target-gas-limit=10000000");
+
+    @SuppressWarnings("unchecked")
+    final ArgumentCaptor<Function<Long, Long>> gasLimitCalculatorArg =
+        ArgumentCaptor.forClass((Class) Function.class);
+
+    verify(mockControllerBuilder).gasLimitCalculator(gasLimitCalculatorArg.capture());
+    verify(mockControllerBuilder).build();
+
+    assertThat(commandOutput.toString()).isEmpty();
+    assertThat(commandErrorOutput.toString()).isEmpty();
+
+    assertThat(gasLimitCalculatorArg.getValue().apply(9000000L)).isEqualTo(9000000L + 1024L);
+    assertThat(gasLimitCalculatorArg.getValue().apply(11000000L)).isEqualTo(11000000L - 1024L);
+  }
+
+  @Test
+  public void targetGasLimitIsDisabledWhenNotSpecified() throws Exception {
+    parseCommand();
+
+    @SuppressWarnings("unchecked")
+    final ArgumentCaptor<Function<Long, Long>> gasLimitCalculatorArg =
+        ArgumentCaptor.forClass((Class) Function.class);
+
+    verify(mockControllerBuilder).gasLimitCalculator(gasLimitCalculatorArg.capture());
+    verify(mockControllerBuilder).build();
+
+    assertThat(commandOutput.toString()).isEmpty();
+    assertThat(commandErrorOutput.toString()).isEmpty();
+
+    assertThat(gasLimitCalculatorArg.getValue().apply(9000000L)).isEqualTo(9000000L);
+    assertThat(gasLimitCalculatorArg.getValue().apply(11000000L)).isEqualTo(11000000L);
   }
 }

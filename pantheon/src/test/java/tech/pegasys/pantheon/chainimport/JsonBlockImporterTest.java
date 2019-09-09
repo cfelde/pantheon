@@ -425,6 +425,7 @@ public abstract class JsonBlockImporterTest {
         .dataDirectory(dataDir)
         .clock(TestClock.fixed())
         .transactionPoolConfiguration(TransactionPoolConfiguration.builder().build())
+        .gasLimitCalculator(gasLimit -> gasLimit)
         .build();
   }
 }

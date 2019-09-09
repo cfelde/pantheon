@@ -49,7 +49,8 @@ public class EthHashMinerExecutorTest {
             null,
             pendingTransactions,
             miningParameters,
-            new DefaultBlockScheduler(1, 10, TestClock.fixed()));
+            new DefaultBlockScheduler(1, 10, TestClock.fixed()),
+            (gasLimit) -> gasLimit);
 
     assertThatExceptionOfType(CoinbaseNotSetException.class)
         .isThrownBy(() -> executor.startAsyncMining(Subscribers.create(), null))
@@ -74,7 +75,8 @@ public class EthHashMinerExecutorTest {
             null,
             pendingTransactions,
             miningParameters,
-            new DefaultBlockScheduler(1, 10, TestClock.fixed()));
+            new DefaultBlockScheduler(1, 10, TestClock.fixed()),
+            (gasLimit) -> gasLimit);
 
     assertThatExceptionOfType(IllegalArgumentException.class)
         .isThrownBy(() -> executor.setCoinbase(null))

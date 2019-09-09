@@ -88,6 +88,7 @@ public final class RlpBlockExporterTest {
         .dataDirectory(dataDir)
         .clock(TestClock.fixed())
         .transactionPoolConfiguration(TransactionPoolConfiguration.builder().build())
+        .gasLimitCalculator(gasLimit -> gasLimit)
         .build();
   }
 
