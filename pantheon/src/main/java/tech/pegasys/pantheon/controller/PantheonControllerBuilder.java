@@ -12,7 +12,6 @@
  */
 package tech.pegasys.pantheon.controller;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static tech.pegasys.pantheon.controller.KeyPairUtil.loadKeyPair;
@@ -44,13 +43,11 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.JsonRpcMethodFact
 import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSchedule;
 import tech.pegasys.pantheon.ethereum.p2p.config.SubProtocolConfiguration;
 import tech.pegasys.pantheon.ethereum.storage.StorageProvider;
-import tech.pegasys.pantheon.ethereum.storage.keyvalue.RocksDbStorageProvider;
 import tech.pegasys.pantheon.ethereum.worldstate.MarkSweepPruner;
 import tech.pegasys.pantheon.ethereum.worldstate.Pruner;
 import tech.pegasys.pantheon.ethereum.worldstate.PruningConfiguration;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateArchive;
-import tech.pegasys.pantheon.plugin.services.MetricsSystem;
-import tech.pegasys.pantheon.services.kvstore.RocksDbConfiguration;
+import tech.pegasys.pantheon.metrics.ObservableMetricsSystem;
 
 import java.io.File;
 import java.io.IOException;
@@ -60,6 +57,7 @@ import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.concurrent.Executors;
@@ -70,6 +68,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public abstract class PantheonControllerBuilder<C> {
+
   private static final Logger LOG = LogManager.getLogger();
 
   protected GenesisConfigFile genesisConfig;
@@ -79,7 +78,7 @@ public abstract class PantheonControllerBuilder<C> {
   protected TransactionPoolConfiguration transactionPoolConfiguration;
   protected BigInteger networkId;
   protected MiningParameters miningParameters;
-  protected MetricsSystem metricsSystem;
+  protected ObservableMetricsSystem metricsSystem;
   protected PrivacyParameters privacyParameters;
   protected Path dataDirectory;
   protected Clock clock;
@@ -88,15 +87,9 @@ public abstract class PantheonControllerBuilder<C> {
   protected Function<Long, Long> gasLimitCalculator;
   private StorageProvider storageProvider;
   private final List<Runnable> shutdownActions = new ArrayList<>();
-  private RocksDbConfiguration rocksDbConfiguration;
   private boolean isPruningEnabled;
   private PruningConfiguration pruningConfiguration;
-
-  public PantheonControllerBuilder<C> rocksDbConfiguration(
-      final RocksDbConfiguration rocksDbConfiguration) {
-    this.rocksDbConfiguration = rocksDbConfiguration;
-    return this;
-  }
+  Map<String, String> genesisConfigOverrides;
 
   public PantheonControllerBuilder<C> storageProvider(final StorageProvider storageProvider) {
     this.storageProvider = storageProvider;
@@ -141,7 +134,7 @@ public abstract class PantheonControllerBuilder<C> {
     return this;
   }
 
-  public PantheonControllerBuilder<C> metricsSystem(final MetricsSystem metricsSystem) {
+  public PantheonControllerBuilder<C> metricsSystem(final ObservableMetricsSystem metricsSystem) {
     this.metricsSystem = metricsSystem;
     return this;
   }
@@ -183,13 +176,19 @@ public abstract class PantheonControllerBuilder<C> {
     return this;
   }
 
+  public PantheonControllerBuilder<C> genesisConfigOverrides(
+      final Map<String, String> genesisConfigOverrides) {
+    this.genesisConfigOverrides = genesisConfigOverrides;
+    return this;
+  }
+
   public PantheonControllerBuilder<C> gasLimitCalculator(
       final Function<Long, Long> gasLimitCalculator) {
     this.gasLimitCalculator = gasLimitCalculator;
     return this;
   }
 
-  public PantheonController<C> build() throws IOException {
+  public PantheonController<C> build() {
     checkNotNull(genesisConfig, "Missing genesis config");
     checkNotNull(syncConfig, "Missing sync config");
     checkNotNull(ethereumWireProtocolConfiguration, "Missing ethereum protocol configuration");
@@ -201,17 +200,8 @@ public abstract class PantheonControllerBuilder<C> {
     checkNotNull(clock, "Mising clock");
     checkNotNull(transactionPoolConfiguration, "Missing transaction pool configuration");
     checkNotNull(nodeKeys, "Missing node keys");
+    checkNotNull(storageProvider, "Must supply a storage provider");
     checkNotNull(gasLimitCalculator, "Missing gas limit calculator");
-    checkArgument(
-        storageProvider != null || rocksDbConfiguration != null,
-        "Must supply either a storage provider or RocksDB configuration");
-    checkArgument(
-        storageProvider == null || rocksDbConfiguration == null,
-        "Must supply either storage provider or RocksDB confguration, but not both");
-
-    if (storageProvider == null && rocksDbConfiguration != null) {
-      storageProvider = RocksDbStorageProvider.create(rocksDbConfiguration, metricsSystem);
-    }
 
     prepForBuild();
 
@@ -281,7 +271,8 @@ public abstract class PantheonControllerBuilder<C> {
             clock,
             metricsSystem);
 
-    final OptionalLong daoBlock = genesisConfig.getConfigOptions().getDaoForkBlock();
+    final OptionalLong daoBlock =
+        genesisConfig.getConfigOptions(genesisConfigOverrides).getDaoForkBlock();
     if (daoBlock.isPresent()) {
       // Setup dao validator
       final EthContext ethContext = ethProtocolManager.ethContext();
@@ -320,11 +311,10 @@ public abstract class PantheonControllerBuilder<C> {
         protocolSchedule,
         protocolContext,
         ethProtocolManager,
-        genesisConfig.getConfigOptions(),
+        genesisConfig.getConfigOptions(genesisConfigOverrides),
         subProtocolConfiguration,
         synchronizer,
-        additionalJsonRpcMethodFactory,
-        nodeKeys,
+        syncState,
         transactionPool,
         miningCoordinator,
         privacyParameters,
@@ -338,7 +328,9 @@ public abstract class PantheonControllerBuilder<C> {
           } catch (final IOException e) {
             LOG.error("Failed to close storage provider", e);
           }
-        });
+        },
+        additionalJsonRpcMethodFactory,
+        nodeKeys);
   }
 
   protected void prepForBuild() {}

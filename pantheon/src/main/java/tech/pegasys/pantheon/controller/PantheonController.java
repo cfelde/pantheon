@@ -21,6 +21,7 @@ import tech.pegasys.pantheon.ethereum.blockcreation.MiningCoordinator;
 import tech.pegasys.pantheon.ethereum.core.PrivacyParameters;
 import tech.pegasys.pantheon.ethereum.core.Synchronizer;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthProtocolManager;
+import tech.pegasys.pantheon.ethereum.eth.sync.state.SyncState;
 import tech.pegasys.pantheon.ethereum.eth.transactions.TransactionPool;
 import tech.pegasys.pantheon.ethereum.jsonrpc.RpcApi;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.JsonRpcMethod;
@@ -29,6 +30,7 @@ import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSchedule;
 import tech.pegasys.pantheon.ethereum.p2p.config.SubProtocolConfiguration;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 
 public class PantheonController<C> implements java.io.Closeable {
@@ -47,6 +49,7 @@ public class PantheonController<C> implements java.io.Closeable {
   private final MiningCoordinator miningCoordinator;
   private final PrivacyParameters privacyParameters;
   private final Runnable close;
+  private final SyncState syncState;
 
   PantheonController(
       final ProtocolSchedule<C> protocolSchedule,
@@ -55,18 +58,20 @@ public class PantheonController<C> implements java.io.Closeable {
       final GenesisConfigOptions genesisConfigOptions,
       final SubProtocolConfiguration subProtocolConfiguration,
       final Synchronizer synchronizer,
-      final JsonRpcMethodFactory additionalJsonRpcMethodsFactory,
-      final KeyPair keyPair,
+      final SyncState syncState,
       final TransactionPool transactionPool,
       final MiningCoordinator miningCoordinator,
       final PrivacyParameters privacyParameters,
-      final Runnable close) {
+      final Runnable close,
+      final JsonRpcMethodFactory additionalJsonRpcMethodsFactory,
+      final KeyPair keyPair) {
     this.protocolSchedule = protocolSchedule;
     this.protocolContext = protocolContext;
     this.ethProtocolManager = ethProtocolManager;
     this.genesisConfigOptions = genesisConfigOptions;
     this.subProtocolConfiguration = subProtocolConfiguration;
     this.synchronizer = synchronizer;
+    this.syncState = syncState;
     this.additionalJsonRpcMethodsFactory = additionalJsonRpcMethodsFactory;
     this.keyPair = keyPair;
     this.transactionPool = transactionPool;
@@ -125,16 +130,33 @@ public class PantheonController<C> implements java.io.Closeable {
     return additionalJsonRpcMethodsFactory.createJsonRpcMethods(enabledRpcApis);
   }
 
+  public SyncState getSyncState() {
+    return syncState;
+  }
+
   public static class Builder {
 
     public PantheonControllerBuilder<?> fromEthNetworkConfig(
         final EthNetworkConfig ethNetworkConfig) {
-      return fromGenesisConfig(GenesisConfigFile.fromConfig(ethNetworkConfig.getGenesisConfig()))
+      return fromEthNetworkConfig(ethNetworkConfig, Collections.emptyMap());
+    }
+
+    public PantheonControllerBuilder<?> fromEthNetworkConfig(
+        final EthNetworkConfig ethNetworkConfig, final Map<String, String> genesisConfigOverrides) {
+      return fromGenesisConfig(
+              GenesisConfigFile.fromConfig(ethNetworkConfig.getGenesisConfig()),
+              genesisConfigOverrides)
           .networkId(ethNetworkConfig.getNetworkId());
     }
 
     public PantheonControllerBuilder<?> fromGenesisConfig(final GenesisConfigFile genesisConfig) {
-      final GenesisConfigOptions configOptions = genesisConfig.getConfigOptions();
+      return fromGenesisConfig(genesisConfig, Collections.emptyMap());
+    }
+
+    public PantheonControllerBuilder<?> fromGenesisConfig(
+        final GenesisConfigFile genesisConfig, final Map<String, String> genesisConfigOverrides) {
+      final GenesisConfigOptions configOptions =
+          genesisConfig.getConfigOptions(genesisConfigOverrides);
       final PantheonControllerBuilder<?> builder;
 
       if (configOptions.isEthHash()) {

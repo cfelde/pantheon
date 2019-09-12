@@ -106,5 +106,8 @@ Xincoming-tx-messages-keep-alive-seconds=60
 # Revert Reason
 revert-reason-enabled=false
 
+# Storage plugin to use
+key-value-storage="rocksdb"
+
 # Gas limit
 target-gas-limit=8000000
