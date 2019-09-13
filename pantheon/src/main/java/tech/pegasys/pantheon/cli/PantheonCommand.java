@@ -123,7 +123,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -687,7 +686,6 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
   private MetricsConfiguration metricsConfiguration;
   private Optional<PermissioningConfiguration> permissioningConfiguration;
   private Collection<EnodeURL> staticNodes;
-  private Function<Long, Long> gasLimitCalculator;
   private PantheonController<?> pantheonController;
   private StandaloneCommand standaloneCommands;
   private PantheonConfiguration pluginCommonConfiguration;
@@ -945,7 +943,6 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
     webSocketConfiguration = webSocketConfiguration();
     permissioningConfiguration = permissioningConfiguration();
     staticNodes = loadStaticNodes();
-    gasLimitCalculator = gasLimitCalculator();
     logger.info("Connecting to {} static nodes.", staticNodes.size());
     logger.trace("Static Nodes = {}", staticNodes);
     final List<URI> enodeURIs =
@@ -1013,7 +1010,7 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
           .isPruningEnabled(isPruningEnabled)
           .pruningConfiguration(buildPruningConfiguration())
           .genesisConfigOverrides(genesisConfigOverrides)
-          .gasLimitCalculator(gasLimitCalculator);
+          .targetGasLimit(targetGasLimit);
     } catch (final IOException e) {
       throw new ExecutionException(this.commandLine, "Invalid path", e);
     }
@@ -1606,31 +1603,6 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
     final Path staticNodesPath = dataDir().resolve(staticNodesFilename);
 
     return StaticNodesParser.fromPath(staticNodesPath);
-  }
-
-  private Function<Long, Long> gasLimitCalculator() {
-    final long targetGasLimit = this.targetGasLimit == null ? 0L : this.targetGasLimit;
-    final long adjustmentFactor = 1024L;
-
-    if (targetGasLimit > 0L) {
-      return (gasLimit) -> {
-        long newGasLimit;
-
-        if (targetGasLimit > gasLimit) {
-          newGasLimit = Math.min(targetGasLimit, gasLimit + adjustmentFactor);
-        } else if (targetGasLimit < gasLimit) {
-          newGasLimit = Math.max(targetGasLimit, gasLimit - adjustmentFactor);
-        } else {
-          return gasLimit;
-        }
-
-        logger.debug("Adjusting block gas limit from {} to {}", gasLimit, newGasLimit);
-
-        return newGasLimit;
-      };
-    } else {
-      return gasLimit -> gasLimit;
-    }
   }
 
   public PantheonExceptionHandler exceptionHandler() {

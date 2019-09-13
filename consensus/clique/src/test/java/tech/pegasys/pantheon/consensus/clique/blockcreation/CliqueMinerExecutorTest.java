@@ -46,6 +46,7 @@ import tech.pegasys.pantheon.util.bytes.BytesValue;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.Executors;
+import java.util.function.Function;
 
 import com.google.common.collect.Lists;
 import org.junit.Before;
@@ -99,7 +100,7 @@ public class CliqueMinerExecutorTest {
             new MiningParameters(AddressHelpers.ofValue(1), Wei.ZERO, vanityData, false),
             mock(CliqueBlockScheduler.class),
             new EpochManager(EPOCH_LENGTH),
-            (gasLimit) -> gasLimit);
+            Function.identity());
 
     // NOTE: Passing in the *parent* block, so must be 1 less than EPOCH
     final BlockHeader header = blockHeaderBuilder.number(EPOCH_LENGTH - 1).buildHeader();
@@ -137,7 +138,7 @@ public class CliqueMinerExecutorTest {
             new MiningParameters(AddressHelpers.ofValue(1), Wei.ZERO, vanityData, false),
             mock(CliqueBlockScheduler.class),
             new EpochManager(EPOCH_LENGTH),
-            (gasLimit) -> gasLimit);
+            Function.identity());
 
     // Parent block was epoch, so the next block should contain no validators.
     final BlockHeader header = blockHeaderBuilder.number(EPOCH_LENGTH).buildHeader();
@@ -175,7 +176,7 @@ public class CliqueMinerExecutorTest {
             new MiningParameters(AddressHelpers.ofValue(1), Wei.ZERO, initialVanityData, false),
             mock(CliqueBlockScheduler.class),
             new EpochManager(EPOCH_LENGTH),
-            (gasLimit) -> gasLimit);
+            Function.identity());
 
     executor.setExtraData(modifiedVanityData);
     final BytesValue extraDataBytes = executor.calculateExtraData(blockHeaderBuilder.buildHeader());

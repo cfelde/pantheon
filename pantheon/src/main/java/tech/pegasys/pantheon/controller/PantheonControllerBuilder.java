@@ -61,7 +61,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.concurrent.Executors;
-import java.util.function.Function;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.logging.log4j.LogManager;
@@ -84,7 +83,7 @@ public abstract class PantheonControllerBuilder<C> {
   protected Clock clock;
   protected KeyPair nodeKeys;
   protected boolean isRevertReasonEnabled;
-  protected Function<Long, Long> gasLimitCalculator;
+  protected GasLimitCalculator gasLimitCalculator;
   private StorageProvider storageProvider;
   private final List<Runnable> shutdownActions = new ArrayList<>();
   private boolean isPruningEnabled;
@@ -182,9 +181,8 @@ public abstract class PantheonControllerBuilder<C> {
     return this;
   }
 
-  public PantheonControllerBuilder<C> gasLimitCalculator(
-      final Function<Long, Long> gasLimitCalculator) {
-    this.gasLimitCalculator = gasLimitCalculator;
+  public PantheonControllerBuilder<C> targetGasLimit(final Long targetGasLimit) {
+    this.gasLimitCalculator = new GasLimitCalculator(targetGasLimit);
     return this;
   }
 

@@ -19,6 +19,7 @@ import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNotNull;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
@@ -72,7 +73,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -174,7 +174,7 @@ public class PantheonCommandTest extends CommandTestAbstract {
     verify(mockControllerBuilder).miningParameters(miningArg.capture());
     verify(mockControllerBuilder).nodePrivateKeyFile(isNotNull());
     verify(mockControllerBuilder).storageProvider(storageProviderArgumentCaptor.capture());
-    verify(mockControllerBuilder).gasLimitCalculator(isNotNull());
+    verify(mockControllerBuilder).targetGasLimit(isNull());
     verify(mockControllerBuilder).build();
 
     assertThat(storageProviderArgumentCaptor.getValue()).isNotNull();
@@ -2742,35 +2742,29 @@ public class PantheonCommandTest extends CommandTestAbstract {
   public void targetGasLimitIsEnabledWhenSpecified() throws Exception {
     parseCommand("--target-gas-limit=10000000");
 
-    @SuppressWarnings("unchecked")
-    final ArgumentCaptor<Function<Long, Long>> gasLimitCalculatorArg =
-        ArgumentCaptor.forClass((Class) Function.class);
+    final ArgumentCaptor<Long> targetGasLimitArg = ArgumentCaptor.forClass(Long.class);
 
-    verify(mockControllerBuilder).gasLimitCalculator(gasLimitCalculatorArg.capture());
+    verify(mockControllerBuilder).targetGasLimit(targetGasLimitArg.capture());
     verify(mockControllerBuilder).build();
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
 
-    assertThat(gasLimitCalculatorArg.getValue().apply(9000000L)).isEqualTo(9000000L + 1024L);
-    assertThat(gasLimitCalculatorArg.getValue().apply(11000000L)).isEqualTo(11000000L - 1024L);
+    assertThat(targetGasLimitArg.getValue()).isEqualTo(10_000_000L);
   }
 
   @Test
   public void targetGasLimitIsDisabledWhenNotSpecified() throws Exception {
     parseCommand();
 
-    @SuppressWarnings("unchecked")
-    final ArgumentCaptor<Function<Long, Long>> gasLimitCalculatorArg =
-        ArgumentCaptor.forClass((Class) Function.class);
+    final ArgumentCaptor<Long> targetGasLimitArg = ArgumentCaptor.forClass(Long.class);
 
-    verify(mockControllerBuilder).gasLimitCalculator(gasLimitCalculatorArg.capture());
+    verify(mockControllerBuilder).targetGasLimit(targetGasLimitArg.capture());
     verify(mockControllerBuilder).build();
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
 
-    assertThat(gasLimitCalculatorArg.getValue().apply(9000000L)).isEqualTo(9000000L);
-    assertThat(gasLimitCalculatorArg.getValue().apply(11000000L)).isEqualTo(11000000L);
+    assertThat(targetGasLimitArg.getValue()).isEqualTo(null);
   }
 }

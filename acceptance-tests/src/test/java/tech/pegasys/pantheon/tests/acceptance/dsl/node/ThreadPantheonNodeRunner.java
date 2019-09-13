@@ -17,6 +17,7 @@ import static tech.pegasys.pantheon.cli.config.NetworkName.DEV;
 import tech.pegasys.pantheon.Runner;
 import tech.pegasys.pantheon.RunnerBuilder;
 import tech.pegasys.pantheon.cli.config.EthNetworkConfig;
+import tech.pegasys.pantheon.controller.GasLimitCalculator;
 import tech.pegasys.pantheon.controller.KeyPairUtil;
 import tech.pegasys.pantheon.controller.PantheonController;
 import tech.pegasys.pantheon.controller.PantheonControllerBuilder;
@@ -142,7 +143,7 @@ public class ThreadPantheonNodeRunner implements PantheonNodeRunner {
               .clock(Clock.systemUTC())
               .isRevertReasonEnabled(node.isRevertReasonEnabled())
               .storageProvider(storageProvider)
-              .gasLimitCalculator((gasLimit) -> gasLimit)
+              .targetGasLimit(GasLimitCalculator.DEFAULT)
               .build();
     } catch (final IOException e) {
       throw new RuntimeException("Error building PantheonController", e);
